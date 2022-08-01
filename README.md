@@ -18,6 +18,7 @@
 ![](./1st_project_modeling.png)
 
 ### 프로젝트 시연 영상
+[![2Sa_living](https://img.youtube.com/vi/znviVvNpcWo/0.jpg)](https://www.youtube.com/watch?v=znviVvNpcWo)
 
 
 <br>
