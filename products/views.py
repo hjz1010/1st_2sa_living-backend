@@ -19,41 +19,62 @@ class CategoryView(View):
 
         return JsonResponse({'message': 'SUCCESS', 'category_list': category_list,'sub_category_list': sub_category_list}, status=200)
 
+
 class ProductListView(View):
     def get(self, request):
         try:
-            DEFAULT_LIMIT  = 4
+            DEFAULT_LIMIT = 4
             DEFAULT_OFFSET = 0
+            PRICE_RANGE = [0, 100000, 500000, 1000000]
 
             category_id     = request.GET.get('category_id', None)
             sub_category_id = request.GET.get('sub_category_id', None)
             limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
-            offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
+            offset          = request.GET.get('offset', DEFAULT_OFFSET))
             sort_type       = request.GET.get('sort_type', 'id')
-            
-            product_q = Q()
+
+            color_name  = request.GET.get('color')
+            brand_id    = request.GET.get('brand_id')
+            price_range = request.GET.get('price_range', None)
+            # 1: 10만원 이하,  2: 50만원 이하,  3: 100만원이하
+
+            q = Q()
 
             if category_id:
-                category        = Category.objects.get(id = category_id)
-                product_q      &= Q(sub_category__category = category)
+                category = Category.objects.get(id = category_id)
+                q       &= Q(sub_category__category = category)
 
             if sub_category_id:
-                sub_category    = SubCategory.objects.get(id = sub_category_id)
-                product_q      &= Q(sub_category = sub_category)
+                sub_category = SubCategory.objects.get(id = sub_category_id)
+                q           &= Q(sub_category = sub_category)
+
+            if color_name:
+                color = Color.objects.get(english_name=color_name)
+                q    &= Q(color=color)
+
+            if brand_id:
+                brand = Brand.objects.get(id=brand_id)
+                q    &= Q(furniture__brand=brand)
             
-            count = Product.objects.filter(product_q).count()   
+            if price_range:
+                q &= Q(price__lte = PRICE_RANGE[int(price_range)])
+
+            count = Product.objects.filter(q).count()   
+
+            product = Product.objects.annotate(total_quantity=Sum(F('orderitem__quantity')))
 
             sort_set = { 
-                'id': 'id',
-                'new': 'furniture__updated_at',
-                'high_price': '-price',
-                'low_price': 'price',
+                'id'           : 'id',
+                'new'          : 'furniture__updated_at',
+                'high_price'   : '-price',
+                'low_price'    : 'price',
+                'sale_quantity': 'total_quantity'
             }
 
             sort_field = sort_set.get(sort_type, 'id')       
 
-            products = Product.objects.filter(product_q).order_by(sort_field)[offset:offset+limit]
-            
+            products = product.filter(q).order_by(sort_field)[offset:offset+limit]
+
             product_list = [{
                 'id'         : product.id,
                 'image'      : product.thumbnail_image_url,
@@ -66,7 +87,8 @@ class ProductListView(View):
         except Category.DoesNotExist:
             return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
         except SubCategory.DoesNotExist:   
-            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)                 
+            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)    
+     
 
 class ProductDetailView(View):
     def get(self, request, product_id):
