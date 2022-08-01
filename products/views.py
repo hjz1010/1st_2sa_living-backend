@@ -4,10 +4,25 @@ from django.db.models  import Q
 
 from products.models import Category, SubCategory, Product
 
+class CategoryView(View):
+    def get(self, request):
+        category_list     = [{
+            'id': category.id, 
+            'name': category.name
+            } for category in Category.objects.all()]
+
+        sub_category_list = [{
+            'id': subcategory.id, 
+            'name': subcategory.name, 
+            'category': subcategory.category.id
+            } for subcategory in SubCategory.objects.all()]
+
+        return JsonResponse({'message': 'SUCCESS', 'category_list': category_list,'sub_category_list': sub_category_list}, status=200)
+
 class ProductListView(View):
     def get(self, request):
         try:
-            DEFAULT_LIMIT = 4
+            DEFAULT_LIMIT  = 4
             DEFAULT_OFFSET = 0
 
             category_id     = request.GET.get('category_id', None)
@@ -75,3 +90,4 @@ class ProductDetailView(View):
             return JsonResponse({'result': result}, status=200)
         except Product.DoesNotExist:
             return JsonResponse({'message': 'INVALID_PRODUCT_ID'}, status=404)
+        
