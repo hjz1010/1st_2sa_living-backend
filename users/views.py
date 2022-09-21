@@ -9,7 +9,7 @@ from django.conf  import settings
 
 from users.models    import User,Like
 from products.models import Product
-from core.utils      import LoginConfirm, login_confirm
+from core.utils      import login_confirm
 
 class SignUpView(View):
     def post(self, request):
