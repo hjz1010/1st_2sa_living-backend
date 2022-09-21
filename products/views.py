@@ -1,8 +1,10 @@
+from enum  import Enum
+
 from django.http       import JsonResponse
 from django.views      import View
-from django.db.models  import Q
+from django.db.models  import Q, Sum, F    
 
-from products.models import Category, SubCategory, Product
+from products.models import Category, SubCategory, Product, Color, Brand  
 
 class CategoryView(View):
     def get(self, request):
@@ -23,41 +25,47 @@ class CategoryView(View):
 class ProductListView(View):
     def get(self, request):
         try:
-            DEFAULT_LIMIT = 4
+            DEFAULT_LIMIT  = 4
             DEFAULT_OFFSET = 0
-            PRICE_RANGE = [0, 100000, 500000, 1000000]
+            # PRICE_RANGE = [0, 100000, 500000, 1000000]
 
             category_id     = request.GET.get('category_id', None)
             sub_category_id = request.GET.get('sub_category_id', None)
-            limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
-            offset          = request.GET.get('offset', DEFAULT_OFFSET))
+            offset          = request.GET.get('offset', DEFAULT_OFFSET)
+            limit           = request.GET.get('limit', DEFAULT_LIMIT)    
             sort_type       = request.GET.get('sort_type', 'id')
-
-            color_name  = request.GET.get('color')
-            brand_id    = request.GET.get('brand_id')
-            price_range = request.GET.get('price_range', None)
-            # 1: 10만원 이하,  2: 50만원 이하,  3: 100만원이하
+            color_name      = request.GET.get('color', None)
+            brand_id        = request.GET.get('brand_id', None)
+            # price_range     = request.GET.get('price_range', None)   # 1: 10만원 이하,  2: 50만원 이하,  3: 100만원이하
+            price_upper_limit = request.GET.get('price_lte', None)
+            price_lower_limit = request.GET.get('price_gte', None)
 
             q = Q()
 
             if category_id:
                 category = Category.objects.get(id = category_id)
-                q       &= Q(sub_category__category = category)
+                q &= Q(sub_category__category = category)
 
             if sub_category_id:
                 sub_category = SubCategory.objects.get(id = sub_category_id)
-                q           &= Q(sub_category = sub_category)
+                q &= Q(sub_category = sub_category)
 
             if color_name:
                 color = Color.objects.get(english_name=color_name)
-                q    &= Q(color=color)
+                q &= Q(color=color)
 
             if brand_id:
                 brand = Brand.objects.get(id=brand_id)
-                q    &= Q(furniture__brand=brand)
+                q &= Q(furniture__brand=brand)
             
-            if price_range:
-                q &= Q(price__lte = PRICE_RANGE[int(price_range)])
+            # if price_range:
+            #     q &= Q(price__lte = PRICE_RANGE[int(price_range)])
+
+            if price_upper_limit :
+                q &= Q(price__lte = price_upper_limit)
+
+            if price_lower_limit :
+                q &= Q(price__gte = price_lower_limit)
 
             count = Product.objects.filter(q).count()   
 
@@ -73,6 +81,8 @@ class ProductListView(View):
 
             sort_field = sort_set.get(sort_type, 'id')       
 
+            offset = int(offset)
+            limit  = int(limit)    # offset, limit 값이 정수가 아닌 경우 ValueError 발생
             products = product.filter(q).order_by(sort_field)[offset:offset+limit]
 
             product_list = [{
@@ -88,6 +98,8 @@ class ProductListView(View):
             return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
         except SubCategory.DoesNotExist:   
             return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)    
+        except ValueError:
+            return JsonResponse({'message': 'INVALID_OFFSET_OR_LIMIT_OR_PRICERANGE'}, status=400)
      
 
 class ProductDetailView(View):
