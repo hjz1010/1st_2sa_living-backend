@@ -93,19 +93,30 @@ class LikeView(View):
         try:
             user    = request.user
             data    = json.loads(request.body)
-            product = data['product_id']
+            # product = data['product_id']
+            product_id = data['product_id']
 
-            product = Product.objects.get(id = product)
+            # product = Product.objects.get(id = product)
 
-            if not Like.objects.filter(user=user, product=product).exists():
-                Like.objects.create(
-                    user    = user,
-                    product = product
-                )
-            else:
-                Like.objects.get(user=user, product=product).delete()
+            # if not Like.objects.filter(user=user, product=product).exists():
+            #     Like.objects.create(
+            #         user    = user,
+            #         product = product
+            #     )
+            # else:
+            #     Like.objects.get(user=user, product=product).delete()
 
-            likes = Like.objects.filter(user_id = user.id)
+            ### get_or_create 함수로 변경해보자
+
+            like, is_created = Like.objects.get_or_create(
+                user=user, 
+                product_id = product_id                
+            )
+
+            if not is_created :
+                like.delete()
+
+            ## 완료!
 
             results_like = [{
                 "product_image"                : like.product.thumbnail_image_url,
@@ -117,7 +128,7 @@ class LikeView(View):
                 "furniture_color_korean_name"  : like.product.color.korean_name,
                 "furniture_color_english_name" : like.product.color.english_name,
                 "price"                        : like.product.price,
-                }for like in likes]
+                }for like in Like.objects.filter(user_id = user.id)]
 
             return JsonResponse({"results" : results_like}, status=200)
 
