@@ -28,7 +28,8 @@ class OrderView(View):
         if not carts.exists():
             return JsonResponse({"message" : "NOT EXIST CARTS"}, status=404)
 
-        with transaction.atomic():
+        with transaction.atomic(): 
+            # 데이터베이스의 완전성(integrity) 유지를 위한 transaction! => 일부 오류 발생 시 모두 되돌린다(rollback)
             order = Order.objects.create(
                 user            = user,
                 order_number    = uuid.uuid4(),

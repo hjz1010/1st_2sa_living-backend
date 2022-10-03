@@ -36,9 +36,9 @@ class CartView(View):
                 cart.quantity += quantity
                 cart.save()
             
-            # status = 201 if is_created else 200
-            # return JsonResponse({"message" : "Created"}, status = status)
-            return JsonResponse({"message" : "Success"}, status = 201)
+            status = 201 if is_created else 200  # 상태코드를 나눠서 확실하게 반환해주는 것이 좋다!
+            return JsonResponse({"message" : "Created"}, status = status)
+            # return JsonResponse({"message" : "Success"}, status = 201)
 
         except KeyError:
             return JsonResponse({"message" : "KeyError"}, status = 400)
